@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>實驗工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px;
+        }
+        .frame {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            border: 2px dashed #ccc;
+            overflow: hidden;
+        }
+        .image {
+            position: absolute;
+            width: 100%;
+            height: auto;
+            cursor: move;
+        }
+        .text-input {
+            margin-top: 20px;
+        }
+        .submit-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>實驗工具</h1>
+    <label for="user-account">輸入帳號：</label>
+    <input type="text" id="user-account" placeholder="輸入測試帳號">
+    <button id="load-images">載入影像</button>
+
+    <div class="container" id="image-container">
+        <!-- 動態載入影像框 -->
+    </div>
+
+    <div class="text-input">
+        <label for="user-response">文字回答：</label>
+        <textarea id="user-response" rows="4" cols="50" placeholder="輸入您的回答"></textarea>
+    </div>
+    <button class="submit-btn" id="submit-data">提交</button>
+
+    <script>
+        const container = document.getElementById('image-container');
+        const loadButton = document.getElementById('load-images');
+        const submitButton = document.getElementById('submit-data');
+
+        loadButton.addEventListener('click', async () => {
+            const userAccount = document.getElementById('user-account').value;
+            if (!userAccount) {
+                alert('請輸入帳號');
+                return;
+            }
+
+            // 請求影像數據
+            const response = await fetch(`/api/images?account=${userAccount}`);
+            const images = await response.json();
+
+            container.innerHTML = ''; // 清空容器
+            images.forEach((image) => {
+                const frame = document.createElement('div');
+                frame.className = 'frame';
+
+                const img = document.createElement('img');
+                img.src = image.url;
+                img.className = 'image';
+                img.draggable = true;
+
+                // 拖曳事件
+                img.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', null);
+                    e.dataTransfer.setDragImage(new Image(), 0, 0);
+                });
+
+                img.addEventListener('dragend', (e) => {
+                    const rect = frame.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    img.style.left = `${x - img.width / 2}px`;
+                    img.style.top = `${y - img.height / 2}px`;
+                });
+
+                frame.appendChild(img);
+                container.appendChild(frame);
+            });
+        });
+
+        submitButton.addEventListener('click', async () => {
+            const userAccount = document.getElementById('user-account').value;
+            const userResponse = document.getElementById('user-response').value;
+
+            const frames = Array.from(document.querySelectorAll('.frame'));
+            const imageData = frames.map((frame, index) => {
+                const img = frame.querySelector('img');
+                const rect = img.getBoundingClientRect();
+                return {
+                    id: index,
+                    url: img.src,
+                    x: img.offsetLeft,
+                    y: img.offsetTop,
+                    width: img.offsetWidth,
+                    height: img.offsetHeight,
+                };
+            });
+
+            const data = {
+                account: userAccount,
+                response: userResponse,
+                images: imageData,
+            };
+
+            const result = await fetch('/api/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+
+            if (result.ok) {
+                alert('數據已提交');
+            } else {
+                alert('提交失敗');
+            }
+        });
+    </script>
+</body>
+</html>
