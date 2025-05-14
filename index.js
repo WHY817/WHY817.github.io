@@ -4,7 +4,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 請將此處改成你的 GitHub Pages 網址，允許跨域請求
-const allowedOrigins = ['WHY817.github.io/'];
+const allowedOrigins = ['https://why817.github.io/'];
 
 app.use(cors({
   origin: function(origin, callback){
